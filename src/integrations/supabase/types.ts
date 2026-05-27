@@ -14,7 +14,85 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      participants: {
+        Row: {
+          display_name: string
+          id: string
+          joined_at: string
+          room_id: string
+        }
+        Insert: {
+          display_name: string
+          id?: string
+          joined_at?: string
+          room_id: string
+        }
+        Update: {
+          display_name?: string
+          id?: string
+          joined_at?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_state: {
+        Row: {
+          current_track_id: string | null
+          is_playing: boolean
+          playback_position_seconds: number
+          room_id: string
+          updated_at: string
+        }
+        Insert: {
+          current_track_id?: string | null
+          is_playing?: boolean
+          playback_position_seconds?: number
+          room_id: string
+          updated_at?: string
+        }
+        Update: {
+          current_track_id?: string | null
+          is_playing?: boolean
+          playback_position_seconds?: number
+          room_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_state_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: true
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
