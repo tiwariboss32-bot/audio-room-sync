@@ -4,8 +4,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { MusicPlayer } from "@/components/MusicPlayer";
 import { TrackQueue } from "@/components/TrackQueue";
 import { JoinModal } from "@/components/JoinModal";
+import { SearchModal } from "@/components/SearchModal";
+import { useServerFn } from "@tanstack/react-start";
+import { listImageKitTracks } from "@/lib/youtube.functions";
 import { CATALOG, type Track } from "@/lib/catalog";
 import { clearSession, getSession, setSession } from "@/lib/session";
+
+interface QueueTrack {
+  id: string;
+  room_id: string;
+  video_id: string;
+  youtube_url: string;
+  title: string;
+  channel: string | null;
+  thumbnail_url: string | null;
+  duration_seconds: number | null;
+  added_by: string | null;
+  position: number;
+  added_at: string;
+}
 
 export const Route = createFileRoute("/room/$roomId")({
   head: () => ({
@@ -40,6 +57,10 @@ function RoomPage() {
   const [session, setSessionState] = useState(() => getSession(roomId));
   const [state, setState] = useState<RoomState | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [queue, setQueue] = useState<QueueTrack[]>([]);
+  const [imageKitTracks, setImageKitTracks] = useState<Track[]>([]);
+  const [queuePage, setQueuePage] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [roomMissing, setRoomMissing] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -57,7 +78,8 @@ function RoomPage() {
       if (rs) {
         setState(rs as RoomState);
       } else {
-        const first = CATALOG[0];
+        const list = imageKitTracks.length > 0 ? imageKitTracks : CATALOG;
+        const first = list[0];
         const { data: created } = await supabase
           .from("room_state")
           .insert({
@@ -73,6 +95,29 @@ function RoomPage() {
       const { data: ps } = await supabase
         .from("participants").select("*").eq("room_id", roomId).order("joined_at");
       if (!cancelled && ps) setParticipants(ps as Participant[]);
+
+      const { data: qs } = await supabase
+        .from("queue_tracks").select("*").eq("room_id", roomId).order("position");
+      if (!cancelled && qs) setQueue(qs as QueueTrack[]);
+
+      // Fetch ImageKit track catalog
+      try {
+        const { tracks } = await getTracks({});
+        if (cancelled) return;
+        setImageKitTracks(tracks);
+        // Auto-select first track if none selected
+        setState((prev) => {
+          if (!prev) return prev;
+          if (prev.current_track_id) return prev;
+          const first = tracks[0] ?? CATALOG[0];
+          if (!first) return prev;
+          const updated = { ...prev, current_track_id: first.id };
+          supabase.from("room_state").update({ current_track_id: first.id, updated_at: new Date().toISOString() }).eq("room_id", roomId).then(() => {});
+          return updated;
+        });
+      } catch (err) {
+        console.error("Failed to load ImageKit tracks:", err);
+      }
     })();
     return () => { cancelled = true; };
   }, [roomId]);
@@ -97,6 +142,18 @@ function RoomPage() {
       .on("postgres_changes",
         { event: "DELETE", schema: "public", table: "participants", filter: `room_id=eq.${roomId}` },
         (payload) => setParticipants((p) => p.filter((x) => x.id !== (payload.old as Participant).id)))
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "queue_tracks", filter: `room_id=eq.${roomId}` },
+        (payload) => {
+          setQueuePage(0);
+          setQueue((q) => {
+            const nq = payload.new as QueueTrack;
+            return q.some((x) => x.id === nq.id) ? q : [...q, nq].sort((a, b) => a.position - b.position);
+          });
+        })
+      .on("postgres_changes",
+        { event: "DELETE", schema: "public", table: "queue_tracks", filter: `room_id=eq.${roomId}` },
+        (payload) => setQueue((q) => q.filter((x) => x.id !== (payload.old as QueueTrack).id)))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [roomId]);
@@ -169,6 +226,18 @@ function RoomPage() {
     navigate({ to: "/" });
   }, [session, roomId, navigate]);
 
+  const getTracks = useServerFn(listImageKitTracks);
+
+  async function runDiag() {
+    setDebugResult("Calling…");
+    try {
+      const r = await diag({});
+      setDebugResult(JSON.stringify(r, null, 2));
+    } catch (e) {
+      setDebugResult(String(e));
+    }
+  }
+
   const shareUrl = useMemo(
     () => (typeof window !== "undefined" ? window.location.href : ""),
     [],
@@ -222,6 +291,14 @@ function RoomPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setSearchOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-mint text-primary-foreground font-semibold px-4 py-2 text-sm glow-mint hover:scale-[1.02] active:scale-95 transition"
+            >
+              <PlusIcon />
+              <span className="hidden xs:inline">Add music</span>
+              <span className="xs:hidden">Add</span>
+            </button>
+            <button
               onClick={copyShare}
               className="hidden sm:inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 backdrop-blur px-4 py-2 text-sm hover:bg-card/70 transition"
             >
@@ -237,18 +314,96 @@ function RoomPage() {
           </div>
         </header>
 
+        <SearchModal
+          open={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          roomId={roomId}
+          addedBy={session.displayName}
+        />
+
         {/* Sidebar layout: queue left, player right */}
         <div className="grid lg:grid-cols-[340px_minmax(0,1fr)] gap-6">
           <aside className="rounded-3xl border border-border/60 bg-card/40 backdrop-blur p-5 h-fit lg:sticky lg:top-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Queue</h3>
-              <span className="text-xs font-mono text-muted-foreground">{CATALOG.length}</span>
+              <span className="text-xs font-mono text-muted-foreground">
+                {imageKitTracks.length > 0 ? imageKitTracks.length : CATALOG.length}
+              </span>
             </div>
             <TrackQueue
               currentTrackId={state?.current_track_id ?? null}
               isPlaying={state?.is_playing ?? false}
               onSelect={onSelectTrack}
+              tracks={imageKitTracks.length > 0 ? imageKitTracks : undefined}
             />
+
+            <div className="mt-6 pt-5 border-t border-border/60">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Added · YouTube</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-muted-foreground">{queue.length}</span>
+                  <button
+                    onClick={() => {
+                      supabase
+                        .from("queue_tracks").select("*").eq("room_id", roomId).order("position")
+                        .then(({ data }) => { if (data) setQueue(data as QueueTrack[]); });
+                    }}
+                    className="text-[11px] text-mint hover:underline"
+                  >
+                    Reload
+                  </button>
+                </div>
+              </div>
+              {queue.length > 0 && (
+                <>
+                  <ul className="space-y-1.5">
+                    {queue.slice(queuePage * 10, (queuePage + 1) * 10).map((t) => (
+                      <li key={t.id} className="group flex gap-2.5 rounded-xl p-1.5 hover:bg-secondary/40 transition">
+                        <div className="size-10 rounded-lg overflow-hidden bg-secondary/60 shrink-0">
+                          {t.thumbnail_url && <img src={t.thumbnail_url} alt="" className="size-full object-cover" loading="lazy" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold truncate" title={t.title}>{t.title}</div>
+                          <div className="text-[11px] text-muted-foreground truncate">
+                            {t.channel}{t.added_by ? ` · by ${t.added_by}` : ""}
+                          </div>
+                        </div>
+                        <a
+                          href={t.youtube_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="self-center text-[11px] text-mint opacity-0 group-hover:opacity-100 transition shrink-0 pr-1"
+                          aria-label="Open on YouTube"
+                        >
+                          ↗
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                  {queue.length > 10 && (
+                    <div className="flex items-center justify-center gap-2 mt-3">
+                      <button
+                        disabled={queuePage === 0}
+                        onClick={() => setQueuePage((p) => p - 1)}
+                        className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition px-2 py-1"
+                      >
+                        ← Prev
+                      </button>
+                      <span className="text-xs font-mono text-muted-foreground">
+                        {queuePage + 1} / {Math.ceil(queue.length / 10)}
+                      </span>
+                      <button
+                        disabled={(queuePage + 1) * 10 >= queue.length}
+                        onClick={() => setQueuePage((p) => p + 1)}
+                        className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition px-2 py-1"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
 
             <div className="mt-6 pt-5 border-t border-border/60">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
@@ -279,6 +434,7 @@ function RoomPage() {
                 onPause={onPause}
                 onSeek={onSeek}
                 onSelectTrack={onSelectTrack}
+                tracks={imageKitTracks.length > 0 ? imageKitTracks : undefined}
               />
             ) : (
               <div className="rounded-3xl border border-border/60 bg-card/40 backdrop-blur p-12 text-center text-muted-foreground">
@@ -307,4 +463,8 @@ function Avatar({ name }: { name: string }) {
 
 function LinkIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
+}
+
+function PlusIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>;
 }
