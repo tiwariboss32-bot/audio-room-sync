@@ -10,6 +10,10 @@ import { listImageKitTracks } from "@/lib/youtube.functions";
 import { CATALOG, type Track } from "@/lib/catalog";
 import { clearSession, getSession, setSession } from "@/lib/session";
 
+function trunc(s: string, n: number) {
+  return s.length > n ? s.slice(0, n) + "…" : s;
+}
+
 interface QueueTrack {
   id: string;
   room_id: string;
@@ -273,7 +277,7 @@ function RoomPage() {
     <div className="min-h-screen gradient-hero relative">
       <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 overflow-x-hidden">
         {/* Top bar */}
         <header className="flex items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
@@ -323,7 +327,7 @@ function RoomPage() {
 
         {/* Sidebar layout: queue left, player right */}
         <div className="grid lg:grid-cols-[340px_minmax(0,1fr)] gap-6">
-          <aside className="rounded-3xl border border-border/60 bg-card/40 backdrop-blur p-5 h-fit lg:sticky lg:top-6">
+          <aside className="rounded-3xl border border-border/60 bg-card/40 backdrop-blur p-3 sm:p-5 h-fit order-2 lg:order-1 lg:sticky lg:top-6 max-lg:max-h-[50vh] max-lg:overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Queue</h3>
               <span className="text-xs font-mono text-muted-foreground">
@@ -345,13 +349,13 @@ function RoomPage() {
                 </div>
                 <ul className="space-y-1.5">
                   {queue.map((t) => (
-                    <li key={t.id} className="group flex gap-2.5 rounded-xl p-1.5 hover:bg-secondary/40 transition">
-                      <div className="size-10 rounded-lg overflow-hidden bg-secondary/60 shrink-0">
+                    <li key={t.id} className="group flex gap-2 sm:gap-2.5 rounded-xl p-1 sm:p-1.5 hover:bg-secondary/40 transition">
+                      <div className="size-8 sm:size-10 rounded-lg overflow-hidden bg-secondary/60 shrink-0">
                         {t.thumbnail_url && <img src={t.thumbnail_url} alt="" className="size-full object-cover" loading="lazy" />}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs font-semibold truncate" title={t.title}>{t.title}</div>
-                        <div className="text-[11px] text-muted-foreground truncate">
+                        <div className="text-[11px] sm:text-xs font-semibold truncate" title={t.title}>{trunc(t.title, 65)}</div>
+                        <div className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
                           {t.channel}{t.added_by ? ` · by ${t.added_by}` : ""}
                         </div>
                       </div>
@@ -359,7 +363,7 @@ function RoomPage() {
                         href={t.youtube_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="self-center text-[11px] text-mint opacity-0 group-hover:opacity-100 transition shrink-0 pr-1"
+                        className="self-center text-[10px] sm:text-[11px] text-mint opacity-0 group-hover:opacity-100 transition shrink-0 pr-1"
                         aria-label="Open on YouTube"
                       >
                         ↗
@@ -391,13 +395,13 @@ function RoomPage() {
                 <>
                   <ul className="space-y-1.5">
                     {queue.slice(queuePage * 10, (queuePage + 1) * 10).map((t) => (
-                      <li key={t.id} className="group flex gap-2.5 rounded-xl p-1.5 hover:bg-secondary/40 transition">
-                        <div className="size-10 rounded-lg overflow-hidden bg-secondary/60 shrink-0">
+                      <li key={t.id} className="group flex gap-2 sm:gap-2.5 rounded-xl p-1 sm:p-1.5 hover:bg-secondary/40 transition">
+                        <div className="size-8 sm:size-10 rounded-lg overflow-hidden bg-secondary/60 shrink-0">
                           {t.thumbnail_url && <img src={t.thumbnail_url} alt="" className="size-full object-cover" loading="lazy" />}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold truncate" title={t.title}>{t.title}</div>
-                          <div className="text-[11px] text-muted-foreground truncate">
+                          <div className="text-[11px] sm:text-xs font-semibold truncate" title={t.title}>{trunc(t.title, 65)}</div>
+                          <div className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
                             {t.channel}{t.added_by ? ` · by ${t.added_by}` : ""}
                           </div>
                         </div>
@@ -405,7 +409,7 @@ function RoomPage() {
                           href={t.youtube_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="self-center text-[11px] text-mint opacity-0 group-hover:opacity-100 transition shrink-0 pr-1"
+                          className="self-center text-[10px] sm:text-[11px] text-mint opacity-0 group-hover:opacity-100 transition shrink-0 pr-1"
                           aria-label="Open on YouTube"
                         >
                           ↗
@@ -456,7 +460,7 @@ function RoomPage() {
             </div>
           </aside>
 
-          <main>
+          <main className="order-1 lg:order-2">
             {state ? (
               <MusicPlayer
                 trackId={state.current_track_id}

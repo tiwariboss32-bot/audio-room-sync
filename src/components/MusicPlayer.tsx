@@ -85,11 +85,11 @@ export function MusicPlayer({
   }
 
   return (
-    <div className="rounded-3xl border border-border/60 bg-card/60 backdrop-blur p-8 glow-mint">
+    <div className="rounded-3xl border border-border/60 bg-card/60 backdrop-blur p-4 sm:p-8 glow-mint">
       <audio ref={audioRef} preload="auto" onEnded={next} />
 
       <div className="flex flex-col items-center text-center">
-        <div className="relative size-56 rounded-3xl gradient-mint glow-mint flex items-center justify-center mb-8 overflow-hidden">
+        <div className="relative size-40 sm:size-56 rounded-3xl gradient-mint glow-mint flex items-center justify-center mb-6 sm:mb-8 overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center gap-1.5">
             {Array.from({ length: 12 }).map((_, i) => (
               <span
@@ -105,11 +105,11 @@ export function MusicPlayer({
           </div>
         </div>
 
-        <div className="min-h-[60px]">
-          <h2 className="text-2xl font-bold text-foreground">
+        <div className="w-full min-h-[60px]">
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground truncate max-w-full" title={track?.title}>
             {track?.title ?? "Pick a track"}
           </h2>
-          <p className="text-muted-foreground mt-1">{track?.artist ?? "—"}</p>
+          <p className="text-muted-foreground mt-1 truncate">{track?.artist ?? "—"}</p>
         </div>
 
         <div className="mt-8 flex items-center gap-5">
