@@ -90,6 +90,10 @@ function RoomPage() {
       const { data: ps } = await supabase
         .from("participants").select("*").eq("room_id", roomId).order("joined_at");
       if (!cancelled && ps) setParticipants(ps as Participant[]);
+
+      const { data: qs } = await supabase
+        .from("queue_tracks").select("*").eq("room_id", roomId).order("position");
+      if (!cancelled && qs) setQueue(qs as QueueTrack[]);
     })();
     return () => { cancelled = true; };
   }, [roomId]);
