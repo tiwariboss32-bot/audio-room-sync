@@ -25,7 +25,7 @@ export function JoinModal({ roomId, onJoin }: Props) {
       <div className="absolute inset-0 bg-grid opacity-30" />
       <form
         onSubmit={submit}
-        className="relative z-10 w-full max-w-md mx-4 rounded-3xl border border-border/60 bg-card/80 backdrop-blur p-8 glow-mint"
+        className="relative z-10 w-full max-w-md mx-4 rounded-3xl border border-border/60 bg-card/80 backdrop-blur p-5 sm:p-8 glow-mint"
       >
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="inline-block size-2 rounded-full bg-mint shadow-[0_0_10px_var(--mint)]" />

@@ -105,7 +105,7 @@ export function MusicPlayer({
           </div>
         </div>
 
-        <div className="w-full min-h-[60px]">
+        <div className="w-full min-h-[60px] min-w-0">
           <h2 className="text-xl sm:text-2xl font-bold text-foreground truncate max-w-full" title={track?.title}>
             {track?.title ?? "Pick a track"}
           </h2>

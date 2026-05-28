@@ -1,9 +1,5 @@
 import { CATALOG, type Track } from "@/lib/catalog";
 
-function trunc(s: string, n: number) {
-  return s.length > n ? s.slice(0, n) + "…" : s;
-}
-
 interface Props {
   currentTrackId: string | null;
   isPlaying: boolean;
@@ -41,7 +37,7 @@ export function TrackQueue({ currentTrackId, isPlaying, onSelect, tracks }: Prop
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className={`text-xs sm:text-sm truncate ${active ? "font-semibold" : "font-medium"}`} title={t.title}>{trunc(t.title, 65)}</div>
+              <div className={`text-xs sm:text-sm truncate ${active ? "font-semibold" : "font-medium"}`} title={t.title}>{t.title}</div>
               <div className="text-[11px] sm:text-xs text-muted-foreground truncate">{t.artist}</div>
             </div>
           </button>

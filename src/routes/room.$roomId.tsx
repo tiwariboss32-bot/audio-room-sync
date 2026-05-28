@@ -10,10 +10,6 @@ import { listImageKitTracks } from "@/lib/youtube.functions";
 import { CATALOG, type Track } from "@/lib/catalog";
 import { clearSession, getSession, setSession } from "@/lib/session";
 
-function trunc(s: string, n: number) {
-  return s.length > n ? s.slice(0, n) + "…" : s;
-}
-
 interface QueueTrack {
   id: string;
   room_id: string;
@@ -279,7 +275,7 @@ function RoomPage() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 overflow-x-hidden">
         {/* Top bar */}
-        <header className="flex items-center justify-between gap-4 mb-6">
+        <header className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 sm:gap-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="size-9 rounded-xl gradient-mint flex items-center justify-center glow-mint">
               <div className="flex gap-[3px] items-end h-4">
@@ -293,25 +289,26 @@ function RoomPage() {
               <div className="text-xs text-muted-foreground font-mono mt-0.5">Room {roomId.slice(0, 8)}</div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={() => setSearchOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-mint text-primary-foreground font-semibold px-4 py-2 text-sm glow-mint hover:scale-[1.02] active:scale-95 transition"
+              className="inline-flex items-center justify-center rounded-full bg-mint text-primary-foreground font-semibold p-2.5 sm:px-4 sm:py-2 text-sm glow-mint hover:scale-[1.02] active:scale-95 transition shrink-0"
+              title="Add music"
             >
               <PlusIcon />
-              <span className="hidden xs:inline">Add music</span>
-              <span className="xs:hidden">Add</span>
+              <span className="hidden sm:inline ml-1.5">Add music</span>
             </button>
             <button
               onClick={copyShare}
-              className="hidden sm:inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 backdrop-blur px-4 py-2 text-sm hover:bg-card/70 transition"
+              className="inline-flex items-center justify-center rounded-full border border-border/60 bg-card/40 backdrop-blur p-2.5 sm:px-4 sm:py-2 text-sm hover:bg-card/70 transition shrink-0"
+              title={copied ? "Link copied!" : "Share room"}
             >
-              <LinkIcon />
-              {copied ? "Link copied!" : "Share room"}
+              {copied ? <CheckIcon /> : <LinkIcon />}
+              <span className="hidden sm:inline ml-2">{copied ? "Link copied!" : "Share room"}</span>
             </button>
             <button
               onClick={leaveRoom}
-              className="rounded-full border border-destructive/40 bg-destructive/10 text-destructive px-4 py-2 text-sm hover:bg-destructive/20 transition"
+              className="rounded-full border border-destructive/40 bg-destructive/10 text-destructive px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm hover:bg-destructive/20 transition shrink-0"
             >
               Leave room
             </button>
@@ -327,7 +324,7 @@ function RoomPage() {
 
         {/* Sidebar layout: queue left, player right */}
         <div className="grid lg:grid-cols-[340px_minmax(0,1fr)] gap-6">
-          <aside className="rounded-3xl border border-border/60 bg-card/40 backdrop-blur p-3 sm:p-5 h-fit order-2 lg:order-1 lg:sticky lg:top-6 max-lg:max-h-[50vh] max-lg:overflow-y-auto">
+          <aside className="rounded-3xl border border-border/60 bg-card/40 backdrop-blur p-3 sm:p-5 h-fit order-2 lg:order-1 lg:sticky lg:top-6 max-lg:max-h-[50vh] max-lg:overflow-y-auto min-w-0">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Queue</h3>
               <span className="text-xs font-mono text-muted-foreground">
@@ -340,39 +337,6 @@ function RoomPage() {
               onSelect={onSelectTrack}
               tracks={imageKitTracks.length > 0 ? imageKitTracks : undefined}
             />
-
-            {queue.length > 0 && (
-              <div className="mt-6 pt-5 border-t border-border/60">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Added · YouTube</h3>
-                  <span className="text-xs font-mono text-muted-foreground">{queue.length}</span>
-                </div>
-                <ul className="space-y-1.5">
-                  {queue.map((t) => (
-                    <li key={t.id} className="group flex gap-2 sm:gap-2.5 rounded-xl p-1 sm:p-1.5 hover:bg-secondary/40 transition">
-                      <div className="size-8 sm:size-10 rounded-lg overflow-hidden bg-secondary/60 shrink-0">
-                        {t.thumbnail_url && <img src={t.thumbnail_url} alt="" className="size-full object-cover" loading="lazy" />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[11px] sm:text-xs font-semibold truncate" title={t.title}>{trunc(t.title, 65)}</div>
-                        <div className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
-                          {t.channel}{t.added_by ? ` · by ${t.added_by}` : ""}
-                        </div>
-                      </div>
-                      <a
-                        href={t.youtube_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="self-center text-[10px] sm:text-[11px] text-mint opacity-0 group-hover:opacity-100 transition shrink-0 pr-1"
-                        aria-label="Open on YouTube"
-                      >
-                        ↗
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
             <div className="mt-6 pt-5 border-t border-border/60">
               <div className="flex items-center justify-between mb-3">
@@ -400,7 +364,7 @@ function RoomPage() {
                           {t.thumbnail_url && <img src={t.thumbnail_url} alt="" className="size-full object-cover" loading="lazy" />}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="text-[11px] sm:text-xs font-semibold truncate" title={t.title}>{trunc(t.title, 65)}</div>
+                          <div className="text-[11px] sm:text-xs font-semibold truncate" title={t.title}>{t.title}</div>
                           <div className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
                             {t.channel}{t.added_by ? ` · by ${t.added_by}` : ""}
                           </div>
@@ -409,7 +373,7 @@ function RoomPage() {
                           href={t.youtube_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="self-center text-[10px] sm:text-[11px] text-mint opacity-0 group-hover:opacity-100 transition shrink-0 pr-1"
+                          className="self-center text-[10px] sm:text-[11px] text-mint sm:opacity-0 group-hover:opacity-100 transition shrink-0 pr-1"
                           aria-label="Open on YouTube"
                         >
                           ↗
@@ -460,7 +424,7 @@ function RoomPage() {
             </div>
           </aside>
 
-          <main className="order-1 lg:order-2">
+          <main className="order-1 lg:order-2 min-w-0">
             {state ? (
               <MusicPlayer
                 trackId={state.current_track_id}
@@ -495,6 +459,14 @@ function Avatar({ name }: { name: string }) {
     <span className="size-7 rounded-full bg-secondary/70 border border-border/60 flex items-center justify-center text-xs font-semibold text-foreground">
       {initials || "?"}
     </span>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
   );
 }
 
