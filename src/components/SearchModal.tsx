@@ -131,7 +131,7 @@ export function SearchModal({ open, onClose, roomId, addedBy, onAdded }: Props) 
 
           {error && (
             <div className={`mt-3 text-sm rounded-xl px-3 py-2 ${
-              error.startsWith("Song will be added")
+              error.startsWith("Song added")
                 ? "text-mint bg-mint/10 border border-mint/30"
                 : "text-destructive bg-destructive/10 border border-destructive/30"
             }`}>
