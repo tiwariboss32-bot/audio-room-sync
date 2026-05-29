@@ -74,6 +74,18 @@ function RoomPage() {
       return incoming;
     });
   }, [roomId]);
+
+  const getTracks = useServerFn(listImageKitTracks);
+
+  const refetchTracks = useCallback(async () => {
+    try {
+      const { tracks } = await getTracks({});
+      setImageKitTracks(tracks);
+    } catch (err) {
+      console.error("Failed to refresh ImageKit tracks:", err);
+    }
+  }, [getTracks]);
+
   const [copied, setCopied] = useState(false);
 
   // Initial load
@@ -179,16 +191,22 @@ function RoomPage() {
     return () => clearInterval(interval);
   }, [refetchQueue, boostUntil]);
 
+  // Poll ImageKit track list so new uploads appear automatically
+  useEffect(() => {
+    const interval = setInterval(() => { refetchTracks(); }, 15000);
+    return () => clearInterval(interval);
+  }, [refetchTracks]);
+
   // Refresh when tab regains focus
   useEffect(() => {
-    const onFocus = () => refetchQueue();
+    const onFocus = () => { refetchQueue(); refetchTracks(); };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     return () => {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
     };
-  }, [refetchQueue]);
+  }, [refetchQueue, refetchTracks]);
 
   // Join handler
   const onJoin = useCallback(async (displayName: string) => {
@@ -257,11 +275,6 @@ function RoomPage() {
     }
     navigate({ to: "/" });
   }, [session, roomId, navigate]);
-
-  const getTracks = useServerFn(listImageKitTracks);
-
-
-
 
   const shareUrl = useMemo(
     () => (typeof window !== "undefined" ? window.location.href : ""),
@@ -359,7 +372,12 @@ function RoomPage() {
         <div className="grid lg:grid-cols-[340px_minmax(0,1fr)] gap-6">
           <aside className="rounded-3xl border border-border/60 bg-card/40 backdrop-blur p-3 sm:p-5 h-fit order-2 lg:order-1 lg:sticky lg:top-6 max-lg:max-h-[50vh] max-lg:overflow-y-auto min-w-0">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Queue</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Tracks</h3>
+                <button onClick={refetchTracks} className="text-[11px] text-mint hover:underline">
+                  Reload
+                </button>
+              </div>
               <span className="text-xs font-mono text-muted-foreground">
                 {imageKitTracks.length > 0 ? imageKitTracks.length : CATALOG.length}
               </span>
@@ -376,16 +394,6 @@ function RoomPage() {
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Added · YouTube</h3>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono text-muted-foreground">{queue.length}</span>
-                  <button
-                    onClick={() => {
-                      supabase
-                        .from("queue_tracks").select("*").eq("room_id", roomId).order("position")
-                        .then(({ data }) => { if (data) setQueue(data as QueueTrack[]); });
-                    }}
-                    className="text-[11px] text-mint hover:underline"
-                  >
-                    Reload
-                  </button>
                 </div>
               </div>
               {queue.length > 0 && (
