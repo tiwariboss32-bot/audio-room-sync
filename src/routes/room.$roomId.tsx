@@ -345,6 +345,14 @@ function RoomPage() {
           onClose={() => setSearchOpen(false)}
           roomId={roomId}
           addedBy={session.displayName}
+          onAdded={() => {
+            setBoostUntil(Date.now() + 45000);
+            refetchQueue();
+            // staggered re-fetches to catch the async backend insert
+            [2000, 5000, 10000, 20000, 35000].forEach((ms) =>
+              setTimeout(() => refetchQueue(), ms),
+            );
+          }}
         />
 
         {/* Sidebar layout: queue left, player right */}
