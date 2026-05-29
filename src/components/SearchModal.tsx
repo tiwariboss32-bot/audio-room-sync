@@ -17,7 +17,7 @@ function fmtDuration(s: number | null): string {
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 
-export function SearchModal({ open, onClose, roomId, addedBy }: Props) {
+export function SearchModal({ open, onClose, roomId, addedBy, onAdded }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<YouTubeResult[]>([]);
   const [searching, setSearching] = useState(false);
