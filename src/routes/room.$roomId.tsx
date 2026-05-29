@@ -62,6 +62,18 @@ function RoomPage() {
   const [queuePage, setQueuePage] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [roomMissing, setRoomMissing] = useState(false);
+  const [boostUntil, setBoostUntil] = useState(0);
+
+  const refetchQueue = useCallback(async () => {
+    const { data } = await supabase
+      .from("queue_tracks").select("*").eq("room_id", roomId).order("position");
+    if (!data) return;
+    const incoming = data as QueueTrack[];
+    setQueue((prev) => {
+      if (prev.length === incoming.length && prev.every((p, i) => p.id === incoming[i].id)) return prev;
+      return incoming;
+    });
+  }, [roomId]);
   const [copied, setCopied] = useState(false);
 
   // Initial load
@@ -158,6 +170,26 @@ function RoomPage() {
     return () => { supabase.removeChannel(ch); };
   }, [roomId]);
 
+  // Auto-sync queue: realtime above + polling fallback. Faster polling for ~45s
+  // after the user adds a track, since the external backend processes asynchronously.
+  useEffect(() => {
+    const tick = () => { refetchQueue(); };
+    const isBoosted = () => Date.now() < boostUntil;
+    const interval = setInterval(() => { tick(); }, isBoosted() ? 2500 : 10000);
+    return () => clearInterval(interval);
+  }, [refetchQueue, boostUntil]);
+
+  // Refresh when tab regains focus
+  useEffect(() => {
+    const onFocus = () => refetchQueue();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [refetchQueue]);
+
   // Join handler
   const onJoin = useCallback(async (displayName: string) => {
     const { data, error } = await supabase
@@ -228,15 +260,8 @@ function RoomPage() {
 
   const getTracks = useServerFn(listImageKitTracks);
 
-  async function runDiag() {
-    setDebugResult("Calling…");
-    try {
-      const r = await diag({});
-      setDebugResult(JSON.stringify(r, null, 2));
-    } catch (e) {
-      setDebugResult(String(e));
-    }
-  }
+
+
 
   const shareUrl = useMemo(
     () => (typeof window !== "undefined" ? window.location.href : ""),
@@ -320,6 +345,14 @@ function RoomPage() {
           onClose={() => setSearchOpen(false)}
           roomId={roomId}
           addedBy={session.displayName}
+          onAdded={() => {
+            setBoostUntil(Date.now() + 45000);
+            refetchQueue();
+            // staggered re-fetches to catch the async backend insert
+            [2000, 5000, 10000, 20000, 35000].forEach((ms) =>
+              setTimeout(() => refetchQueue(), ms),
+            );
+          }}
         />
 
         {/* Sidebar layout: queue left, player right */}

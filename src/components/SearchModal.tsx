@@ -7,6 +7,7 @@ interface Props {
   onClose: () => void;
   roomId: string;
   addedBy?: string;
+  onAdded?: () => void;
 }
 
 function fmtDuration(s: number | null): string {
@@ -16,7 +17,7 @@ function fmtDuration(s: number | null): string {
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 
-export function SearchModal({ open, onClose, roomId, addedBy }: Props) {
+export function SearchModal({ open, onClose, roomId, addedBy, onAdded }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<YouTubeResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -77,8 +78,9 @@ export function SearchModal({ open, onClose, roomId, addedBy }: Props) {
         },
       });
       setSubmittingId(null);
-      setError("Song will be added in a minute");
-      setTimeout(onClose, 2000);
+      onAdded?.();
+      setError("Song added — syncing to queue…");
+      setTimeout(onClose, 1500);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : "Submission failed");
@@ -129,7 +131,7 @@ export function SearchModal({ open, onClose, roomId, addedBy }: Props) {
 
           {error && (
             <div className={`mt-3 text-sm rounded-xl px-3 py-2 ${
-              error.startsWith("Song will be added")
+              error.startsWith("Song added")
                 ? "text-mint bg-mint/10 border border-mint/30"
                 : "text-destructive bg-destructive/10 border border-destructive/30"
             }`}>
